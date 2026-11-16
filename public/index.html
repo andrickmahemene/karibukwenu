@@ -119,6 +119,7 @@ footer{text-align:center;padding:1.5rem 1rem;color:var(--mu);font:.8rem system-u
 
 <section id="admin" class="v">
   <h2>Tableau de bord administrateur</h2><div id="adminLogin"></div><div id="adminBody">
+  <div class="row" style="justify-content:flex-end;margin-bottom:.5rem"><button class="btn o s" onclick="logout()">Se déconnecter</button></div>
   <div class="kpi" id="kpi"></div>
   <div class="panel"><h3>Commandes</h3><p class="mu">Remboursement possible uniquement si le plat a été retourné.</p><div class="sc" id="orders"></div>
     <div class="row" style="margin-top:.6rem"><button class="btn o s" onclick="csv()">Exporter en CSV</button></div></div>
@@ -133,10 +134,16 @@ footer{text-align:center;padding:1.5rem 1rem;color:var(--mu);font:.8rem system-u
     <div class="two"><div><label>Nom de l’accompagnement</label><input id="na"></div><div><label>Prix supplémentaire (FCFA, 0 = inclus)</label><input id="nap" type="number" min="0" step="100" value="0"></div></div>
     <button class="btn g s" style="margin-top:.5rem" onclick="addAcc()">Ajouter l’accompagnement</button></div>
   <div class="panel"><h3>Frais de livraison et horaires</h3><div id="zonesAdm"></div></div>
+  <div class="panel"><h3>Sécurité : mots de passe</h3>
+    <label>Profil à modifier</label><select id="pwt"><option value="admin">Administrateur</option><option value="cuisine">Cuisine</option><option value="livreur">Livreur</option></select>
+    <label>Mot de passe administrateur actuel</label><input id="pwc" type="password" autocomplete="current-password">
+    <label>Nouveau mot de passe (8 caractères minimum)</label><input id="pwn" type="password" autocomplete="new-password">
+    <label>Confirmer le nouveau mot de passe</label><input id="pwn2" type="password" autocomplete="new-password">
+    <div id="pwm" class="err"></div><button class="btn g s" style="margin-top:.5rem" onclick="changePwd()">Enregistrer le mot de passe</button></div>
   <div class="panel"><h3>Journal des paiements</h3><div id="paylog" class="mu">Aucune transaction.</div></div></div>
 </section>
 </main>
-<footer>Karibu Kwenu · Restaurant congolais · Bangui · +236 73 00 55 55 · raissakimputu@gmail.com<br><a href="#cuisine" style="color:inherit">Espace équipe</a> · Version de test : paiements simulés. Facebook · WhatsApp Business · Bangui, RCA</footer>
+<footer>Karibu Kwenu · Restaurant congolais · Bangui · +236 73 00 55 55 · raissakimputu@gmail.com<br><a href="#cuisine" style="color:inherit">Espace équipe</a> · <a href="#admin" style="color:inherit">Admin</a> · Version de test : paiements simulés. Facebook · WhatsApp Business · Bangui, RCA</footer>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -170,8 +177,15 @@ async function api(p,o={}){const hd={'Content-Type':'application/json'};if(TOK)h
   if(!r.ok){const e=new Error(j.error||'Erreur du serveur.');e.status=r.status;throw e}return j}
 async function loadCfg(){try{const c=await api('/api/config');menu=c.menu;ACC=c.acc;FEE=c.fee;HRS=c.hrs;DEMO=c.demo}catch(e){}}
 function saveCfg(){clearTimeout(cfgT);cfgT=setTimeout(()=>api('/api/config',{method:'PUT',body:{menu,acc:ACC,fee:FEE,hrs:HRS}}).catch(e=>{if(e.status===401)logout()}),400)}
-function loginHtml(){return `<div class="panel"><h3>Connexion équipe</h3><label>Profil</label><select id="lr"><option value="cuisine">Cuisine</option><option value="livreur">Livreur</option><option value="admin">Administrateur</option></select><label>Mot de passe</label><input id="lp" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"><div id="le" class="err"></div><button class="btn" style="margin-top:.6rem" onclick="doLogin()">Se connecter</button></div>`}
-async function doLogin(){try{const r=await api('/api/login',{method:'POST',body:{role:$('lr').value,password:$('lp').value}});TOK=r.token;ROLE=r.role;try{sessionStorage.setItem('tk',TOK);sessionStorage.setItem('rl',ROLE)}catch(e){}route();loadOrders()}catch(e){$('le').textContent=e.message}}
+function loginHtml(){return `<div class="panel"><h3>Connexion équipe</h3><label>Profil</label><select id="lr"><option value="cuisine">Cuisine</option><option value="livreur">Livreur</option><option value="admin" ${V()==='admin'?'selected':''}>Administrateur</option></select><label>Mot de passe</label><input id="lp" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"><div id="le" class="err"></div><button class="btn" style="margin-top:.6rem" onclick="doLogin()">Se connecter</button><p style="margin:.7rem 0 0"><a href="#" style="color:var(--ac)" onclick="forgot();return false">Mot de passe administrateur oublié ?</a></p><div id="lm" style="margin-top:.4rem"></div></div>`}
+async function doLogin(){try{const r=await api('/api/login',{method:'POST',body:{role:$('lr').value,password:$('lp').value}});TOK=r.token;ROLE=r.role;try{sessionStorage.setItem('tk',TOK);sessionStorage.setItem('rl',ROLE)}catch(e){}if(ROLE==='admin'&&V()!=='admin')go('admin');else route();loadOrders()}catch(e){$('le').textContent=e.message}}
+async function forgot(){const m=$('lm'),e=$('le');e.textContent='';m.style.color='';m.textContent='Envoi en cours…';
+  try{const r=await api('/api/forgot',{method:'POST',body:{}});m.style.color='var(--ac2)';m.textContent=r.message}catch(x){m.textContent='';e.textContent=x.message}}
+async function changePwd(){const m=$('pwm');m.style.color='';
+  if($('pwn').value!==$('pwn2').value){m.textContent='Les deux nouveaux mots de passe ne sont pas identiques.';return}
+  try{const r=await api('/api/password',{method:'POST',body:{target:$('pwt').value,current:$('pwc').value,next:$('pwn').value}});
+    if(r.token){TOK=r.token;try{sessionStorage.setItem('tk',TOK)}catch(e){}}
+    ['pwc','pwn','pwn2'].forEach(i=>$(i).value='');m.style.color='var(--ac2)';m.textContent='Mot de passe enregistré.'}catch(e){m.textContent=e.message}}
 function logout(){TOK='';ROLE='';try{sessionStorage.clear()}catch(e){}orders=[];route()}
 async function loadOrders(){if(!TOK)return;try{orders=await api('/api/orders');if(ROLE==='admin')payLog=await api('/api/paylog')}catch(e){if(e.status===401)logout();return}renderKitchen();renderAdmin()}
 async function refreshMine(){for(const o of mine){if(['Livrée','Annulée','Remboursée'].includes(o.st))continue;try{Object.assign(o,await api('/api/orders/'+o.id+'?ref='+o.ref))}catch(e){}}renderMine();renderPay()}
@@ -179,7 +193,7 @@ function go(v){location.hash=v}
 function route(){
   const v=['menu','apropos','contact','panier','cuisine','admin'].includes(location.hash.slice(1))?location.hash.slice(1):'menu';
   document.querySelectorAll('.v').forEach(s=>s.classList.toggle('on',s.id===v));
-  $('nav').innerHTML=[['menu','Commander'],['apropos','À propos'],['contact','Contact'],['panier','Panier']].concat(ROLE?[['cuisine','Équipe']]:[]).concat(ROLE==='admin'?[['admin','Admin']]:[])
+  $('nav').innerHTML=[['menu','Commander'],['apropos','À propos'],['contact','Contact'],['panier','Panier']].concat(ROLE?[['cuisine','Équipe']]:[['admin','Connexion']]).concat(ROLE==='admin'?[['admin','Admin']]:[])
     .map(([k,l])=>`<a href="#${k}" class="${k===v?'on':''}">${l}</a>`).join('');
   render();if(TOK&&(v==='cuisine'||v==='admin'))loadOrders();
 }
