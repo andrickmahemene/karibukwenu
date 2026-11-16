@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Karibu Kwenu – Restaurant congolais à Bangui</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#7a3b17">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Karibu Kwenu">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{--bg:#fcf6f1;--sf:#fff;--tx:#2e1a0e;--mu:#7a6555;--ac:#7a3b17;--ac2:#1f6b3a;--bd:#eadccf;--wa:#b5651d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1410;--sf:#261d16;--tx:#f3e9dc;--mu:#b3a391;--ac:#d4864a;--ac2:#4fc07a;--bd:#3b2e23;--wa:#c98a4b;color-scheme:dark}}
@@ -119,7 +129,7 @@ footer{text-align:center;padding:1.5rem 1rem;color:var(--mu);font:.8rem system-u
 
 <section id="admin" class="v">
   <h2>Tableau de bord administrateur</h2><div id="adminLogin"></div><div id="adminBody">
-  <div class="row" style="justify-content:flex-end;margin-bottom:.5rem"><button class="btn o s" onclick="logout()">Se déconnecter</button></div>
+  <div class="row" style="justify-content:flex-end;margin-bottom:.5rem"><button class="btn o s" onclick="document.getElementById('pwpanel').scrollIntoView({behavior:'smooth'});$('pwc').focus({preventScroll:true})">Changer le mot de passe</button><button class="btn o s" onclick="logout()">Se déconnecter</button></div>
   <div class="kpi" id="kpi"></div>
   <div class="panel"><h3>Commandes</h3><p class="mu">Remboursement possible uniquement si le plat a été retourné.</p><div class="sc" id="orders"></div>
     <div class="row" style="margin-top:.6rem"><button class="btn o s" onclick="csv()">Exporter en CSV</button></div></div>
@@ -134,7 +144,7 @@ footer{text-align:center;padding:1.5rem 1rem;color:var(--mu);font:.8rem system-u
     <div class="two"><div><label>Nom de l’accompagnement</label><input id="na"></div><div><label>Prix supplémentaire (FCFA, 0 = inclus)</label><input id="nap" type="number" min="0" step="100" value="0"></div></div>
     <button class="btn g s" style="margin-top:.5rem" onclick="addAcc()">Ajouter l’accompagnement</button></div>
   <div class="panel"><h3>Frais de livraison et horaires</h3><div id="zonesAdm"></div></div>
-  <div class="panel"><h3>Sécurité : mots de passe</h3>
+  <div class="panel" id="pwpanel"><h3>Sécurité : mots de passe</h3>
     <label>Profil à modifier</label><select id="pwt"><option value="admin">Administrateur</option><option value="cuisine">Cuisine</option><option value="livreur">Livreur</option></select>
     <label>Mot de passe administrateur actuel</label><input id="pwc" type="password" autocomplete="current-password">
     <label>Nouveau mot de passe (8 caractères minimum)</label><input id="pwn" type="password" autocomplete="new-password">
@@ -143,7 +153,7 @@ footer{text-align:center;padding:1.5rem 1rem;color:var(--mu);font:.8rem system-u
   <div class="panel"><h3>Journal des paiements</h3><div id="paylog" class="mu">Aucune transaction.</div></div></div>
 </section>
 </main>
-<footer>Karibu Kwenu · Restaurant congolais · Bangui · +236 73 00 55 55 · raissakimputu@gmail.com<br><a href="#cuisine" style="color:inherit">Espace équipe</a> · <a href="#admin" style="color:inherit">Admin</a> · Version de test : paiements simulés. Facebook · WhatsApp Business · Bangui, RCA</footer>
+<footer>Karibu Kwenu · Restaurant congolais · Bangui · +236 73 00 55 55 · raissakimputu@gmail.com<br><button id="inst" class="btn g s" style="display:none;margin:.5rem 0" onclick="installApp()">📲 Installer l’application</button><span id="instIos" style="display:none">📲 Sur iPhone : touchez le bouton Partager, puis « Sur l’écran d’accueil ».<br></span><a href="#cuisine" style="color:inherit">Espace équipe</a> · <a href="#admin" style="color:inherit">Admin</a> · Version de test : paiements simulés. Facebook · WhatsApp Business · Bangui, RCA</footer>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -186,6 +196,13 @@ async function changePwd(){const m=$('pwm');m.style.color='';
   try{const r=await api('/api/password',{method:'POST',body:{target:$('pwt').value,current:$('pwc').value,next:$('pwn').value}});
     if(r.token){TOK=r.token;try{sessionStorage.setItem('tk',TOK)}catch(e){}}
     ['pwc','pwn','pwn2'].forEach(i=>$(i).value='');m.style.color='var(--ac2)';m.textContent='Mot de passe enregistré.'}catch(e){m.textContent=e.message}}
+let dip=null;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;const b=$('inst');if(b)b.style.display=''});
+addEventListener('appinstalled',()=>{dip=null;const b=$('inst');if(b)b.style.display='none'});
+function installApp(){if(!dip)return;dip.prompt();dip=null;$('inst').style.display='none'}
+(function(){const ios=/iphone|ipad|ipod/i.test(navigator.userAgent),st=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
+  if(ios&&!st){const h=$('instIos');if(h)h.style.display=''}})();
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 function logout(){TOK='';ROLE='';try{sessionStorage.clear()}catch(e){}orders=[];route()}
 async function loadOrders(){if(!TOK)return;try{orders=await api('/api/orders');if(ROLE==='admin')payLog=await api('/api/paylog')}catch(e){if(e.status===401)logout();return}renderKitchen();renderAdmin()}
 async function refreshMine(){for(const o of mine){if(['Livrée','Annulée','Remboursée'].includes(o.st))continue;try{Object.assign(o,await api('/api/orders/'+o.id+'?ref='+o.ref))}catch(e){}}renderMine();renderPay()}
