@@ -1,7 +1,9 @@
 {
   "name": "karibu-kwenu",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "description": "Karibu Kwenu - commande de cuisine congolaise a Bangui",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
